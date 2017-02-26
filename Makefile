@@ -2,8 +2,9 @@ CC ?= gcc
 CFLAGS_common ?= -Wall -std=gnu99
 CFLAGS_orig = -O0
 CFLAGS_opt  = -O0
+CFLAGS_hash  = -O0
 
-EXEC = phonebook_orig phonebook_opt
+EXEC = phonebook_orig phonebook_opt phonebook_hash
 
 GIT_HOOKS := .git/hooks/pre-commit
 .PHONY: all
@@ -14,6 +15,11 @@ $(GIT_HOOKS):
 	@echo
 
 SRCS_common = main.c
+
+phonebook_hash: $(SRCS_common) phonebook_hash.c phonebook_hash.h
+	$(CC) $(CFLAGS_common) $(CFLAG_hash) \
+		-DIMPL="\"$@.h\"" -o $@ \
+		$(SRCS_common) $@.c
 
 phonebook_orig: $(SRCS_common) phonebook_orig.c phonebook_orig.h
 	$(CC) $(CFLAGS_common) $(CFLAGS_orig) \
@@ -36,6 +42,9 @@ cache-test: $(EXEC)
 	perf stat --repeat 100 \
 		-e cache-misses,cache-references,instructions,cycles \
 		./phonebook_opt
+	perf stat --repeat 100 \
+                -e cache-misses,cache-references,instructions,cycles \
+                ./phonebook_hash
 
 output.txt: cache-test calculate
 	./calculate
@@ -49,4 +58,4 @@ calculate: calculate.c
 .PHONY: clean
 clean:
 	$(RM) $(EXEC) *.o perf.* \
-	      	calculate orig.txt opt.txt output.txt runtime.png
+	      	calculate orig.txt opt.txt hash.txt output.txt runtime.png
